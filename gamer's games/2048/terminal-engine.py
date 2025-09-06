@@ -66,6 +66,13 @@ def compress_and_merge(line):
     line = [num for num in line if num != 0]
     return line + [0] * (4 - len(line))
 
+# quitting functions
+
+def quit_display():
+    print("Quitting application.")
+    clear_screen()
+    exit(0)
+
 def quit_confirm():
     '''Confirm if the user wants to quit.'''
     global error_code, input_code
@@ -75,16 +82,28 @@ def quit_confirm():
     while True:
         confirm = input().strip().upper()
         if confirm == 'Y':
-            print("Quitting application.")
-            exit(0)
-        elif confirm == 'N':
             error_code = 0
             input_code = 0
             break
+        elif confirm == 'N':
+            quit_display()
         else:
             error_code = 5
             input_code = 1
             display()
+
+def welcome_quit():
+    clear_screen
+    print(f"----- WELCOME:{num_to_unit(2048)} -----")
+    print(" ------------------------ ")
+    print(" Use W (up), S (down), \n" \
+          " A (left), D (right) to \n" \
+          " move tiles.")
+    print(" I for instructions.")
+    print(f" Try to reach {num_to_unit(2048)}!    ")
+    to_quit = input(" y to quit (pls not):     \b\b\b\b\b").strip().upper()
+    if to_quit == 'Y':
+        quit_display()
 
 # game state functions
 
@@ -199,7 +218,7 @@ def home():
         if command == 'I':
             display_rules()
         if command == 'Q':
-            quit_confirm()
+            welcome_quit()
 
 # main game loop
 def main():
@@ -303,5 +322,3 @@ if __name__ == "__main__":
                     display()
             if quit_choice:
                 break
-
-#include 
