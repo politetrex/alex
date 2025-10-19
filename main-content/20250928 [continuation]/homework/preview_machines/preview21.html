@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Conway's Game of Life - Dynamic Size</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f0f0f0;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .grid {
+            display: grid;
+            gap: 1px;
+            margin: 20px 0;
+            border: 3px solid #333;
+            padding: 2px;
+            background: #333;
+        }
+        .cell {
+            width: 12px;
+            height: 12px;
+            background: white;
+            cursor: pointer;
+            transition: background 0.1s;
+        }
+        .cell.alive {
+            background: #000;
+        }
+        .controls {
+            margin: 10px 0;
+        }
+        button {
+            margin: 0 5px;
+            padding: 8px 16px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .size-controls {
+            margin: 10px 0;
+            padding: 10px;
+            background: white;
+            border-radius: 5px;
+        }
+        .size-controls input {
+            width: 60px;
+            margin: 0 5px;
+        }
+        .io-section {
+            margin: 10px 0;
+            padding: 10px;
+            background: white;
+            border-radius: 5px;
+            width: 80%;
+        }
+        textarea {
+            width: 100%;
+            height: 100px;
+            font-family: monospace;
+            margin: 5px 0;
+        }
+        .info {
+            margin: 10px 0;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Conway's Game of Life - Dynamic Size</h1>
+        
+        <div class="size-controls">
+            <strong>Grid Size:</strong>
+            Rows: <input type="number" id="rowsInput" value="40" min="10" max="113">
+            Cols: <input type="number" id="colsInput" value="60" min="10" max="63">
+            <button onclick="resizeGrid()">Resize Grid</button>
+            <button onclick="setSize(42, 60)">42×60</button>
+            <button onclick="setSize(40, 60)">40×60</button>
+            <button onclick="setSize(113, 63)">Max (113×63)</button>
+        </div>
+        
+        <div class="controls">
+            <button onclick="resetGrid()">Clear</button>
+            <button onclick="step()">Next Generation</button>
+            <button onclick="toggleRunning()" id="runBtn">Start</button>
+            <button onclick="randomize()">Random</button>
+        </div>
+        
+        <div class="info">
+            Generation: <span id="generation">0</span> | 
+            Living Cells: <span id="liveCount">0</span> |
+            Grid: <span id="gridSize">40×60</span> |
+            <span id="status">Paused</span>
+        </div>
+        
+        <div id="grid" class="grid"></div>
+        
+        <div class="io-section">
+            <h3>Import/Export Patterns</h3>
+            
+            <div>
+                <strong>Export Current Pattern:</strong>
+                <button onclick="exportPattern()">Export to Text</button>
+                <button onclick="exportToFile()">Save to File</button>
+            </div>
+            
+            <div>
+                <strong>Import Pattern:</strong>
+                <button onclick="importPattern()">Import from Text</button>
+                <button onclick="importFromFile()">Load from File</button>
+            </div>
+            
+            <textarea id="patternData" placeholder="Paste pattern data here or export current pattern..."></textarea>
+            
+            <div>
+                <strong>Quick Patterns:</strong>
+                <button onclick="loadGliderStream()">Load Glider Stream</button>
+                <button onclick="loadRandomGliders()">Random Gliders</button>
+            </div>
+        </div>
+        
+        <div class="info">
+            <p><strong>Rules:</strong> 
+            • Live cell with 2-3 neighbors survives • Dead cell with exactly 3 neighbors becomes alive<br>
+            • Click cells to toggle • Export/import your discoveries!</p>
+        </div>
+    </div>
+
+    <script>
+        let ROWS = 40;
+        let COLS = 60;
+        let grid = [];
+        let nextGrid = [];
+        let generation = 0;
+        let isRunning = false;
+        let runInterval;
+        
+        // Initialize grid with current size
+        function initializeGrid() {
+            const gridElement = document.getElementById('grid');
+            gridElement.style.gridTemplateColumns = `repeat(${COLS}, 12px)`;
+            gridElement.innerHTML = '';
+            
+            grid = [];
+            nextGrid = [];
+            for (let i = 0; i < ROWS; i++) {
+                grid[i] = [];
+                nextGrid[i] = [];
+                for (let j = 0; j < COLS; j++) {
+                    grid[i][j] = 0;
+                    nextGrid[i][j] = 0;
+                    
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.dataset.row = i;
+                    cell.dataset.col = j;
+                    cell.addEventListener('click', () => toggleCell(i, j));
+                    cell.addEventListener('mouseover', (e) => {
+                        if (e.buttons === 1) toggleCell(i, j);
+                    });
+                    gridElement.appendChild(cell);
+                }
+            }
+            generation = 0;
+            updateDisplay();
+            updateSizeDisplay();
+        }
+        
+        // Resize grid function
+        function resizeGrid() {
+            const newRows = parseInt(document.getElementById('rowsInput').value) || 40;
+            const newCols = parseInt(document.getElementById('colsInput').value) || 60;
+            
+            // Apply constraints
+            ROWS = Math.max(10, Math.min(113, newRows));
+            COLS = Math.max(10, Math.min(63, newCols));
+            
+            // Update input fields to reflect constrained values
+            document.getElementById('rowsInput').value = ROWS;
+            document.getElementById('colsInput').value = COLS;
+            
+            // Stop simulation and resize
+            if (isRunning) toggleRunning();
+            initializeGrid();
+        }
+        
+        function setSize(rows, cols) {
+            document.getElementById('rowsInput').value = rows;
+            document.getElementById('colsInput').value = cols;
+            resizeGrid();
+        }
+        
+        function updateSizeDisplay() {
+            document.getElementById('gridSize').textContent = `${ROWS}×${COLS}`;
+        }
+        
+        function toggleCell(row, col) {
+            grid[row][col] = grid[row][col] ? 0 : 1;
+            updateDisplay();
+        }
+        
+        function countLiveNeighbors(row, col) {
+            let count = 0;
+            for (let dr = -1; dr <= 1; dr++) {
+                for (let dc = -1; dc <= 1; dc++) {
+                    if (dr === 0 && dc === 0) continue;
+                    
+                    let r = row + dr;
+                    let c = col + dc;
+
+                    // Wrap around edges
+                    if (r < 0) r = ROWS - 1;
+                    if (r >= ROWS) r = 0;
+                    if (c < 0) c = COLS - 1;
+                    if (c >= COLS) c = 0;
+                    
+                    if (grid[r][c] === 1) count++;
+                }
+            }
+            return count;
+        }
+        
+        function step() {
+            for (let i = 0; i < ROWS; i++) {
+                for (let j = 0; j < COLS; j++) {
+                    const neighbors = countLiveNeighbors(i, j);
+                    
+                    if (grid[i][j] === 1) {
+                        nextGrid[i][j] = (neighbors === 2 || neighbors === 3) ? 1 : 0;
+                    } else {
+                        nextGrid[i][j] = (neighbors === 3) ? 1 : 0;
+                    }
+                }
+            }
+            
+            for (let i = 0; i < ROWS; i++) {
+                for (let j = 0; j < COLS; j++) {
+                    grid[i][j] = nextGrid[i][j];
+                }
+            }
+            
+            generation++;
+            updateDisplay();
+        }
+        
+        function updateDisplay() {
+            let liveCount = 0;
+            for (let i = 0; i < ROWS; i++) {
+                for (let j = 0; j < COLS; j++) {
+                    const cell = document.querySelector(`.cell[data-row="${i}"][data-col="${j}"]`);
+                    if (grid[i][j] === 1) {
+                        cell.className = 'cell alive';
+                        liveCount++;
+                    } else {
+                        cell.className = 'cell';
+                    }
+                }
+            }
+            
+            document.getElementById('generation').textContent = generation;
+            document.getElementById('liveCount').textContent = liveCount;
+            document.getElementById('status').textContent = isRunning ? 'Running' : 'Paused';
+        }
+        
+        function toggleRunning() {
+            isRunning = !isRunning;
+            const runBtn = document.getElementById('runBtn');
+            
+            if (isRunning) {
+                runBtn.textContent = 'Stop';
+                runInterval = setInterval(step, 100);
+            } else {
+                runBtn.textContent = 'Start';
+                clearInterval(runInterval);
+            }
+            updateDisplay();
+        }
+        
+        function resetGrid() {
+            clearInterval(runInterval);
+            isRunning = false;
+            document.getElementById('runBtn').textContent = 'Start';
+            initializeGrid();
+        }
+        
+        function randomize() {
+            for (let i = 0; i < ROWS; i++) {
+                for (let j = 0; j < COLS; j++) {
+                    grid[i][j] = Math.random() < 0.2 ? 1 : 0;
+                }
+            }
+            updateDisplay();
+        }
+        
+        // === IMPORT/EXPORT FUNCTIONS ===
+        
+        function exportPattern() {
+            let patternText = "";
+            for (let i = 0; i < ROWS; i++) {
+                let row = "";
+                for (let j = 0; j < COLS; j++) {
+                    row += grid[i][j] ? '*' : '.';
+                }
+                // // Only include non-empty rows
+                // if (row.includes('*')) {
+                //     patternText += row + '\n';
+                // }
+                patternText += row + '\n'; 
+            }
+            document.getElementById('patternData').value = patternText;
+        }
+        
+        function importPattern() {
+            const patternText = document.getElementById('patternData').value;
+            const lines = patternText.split('\n').filter(line => line.trim());
+            
+            resetGrid();
+            
+            for (let i = 0; i < lines.length && i < ROWS; i++) {
+                for (let j = 0; j < lines[i].length && j < COLS; j++) {
+                    if (lines[i][j] === '*') {
+                        grid[i][j] = 1;
+                    }
+                }
+            }
+            updateDisplay();
+        }
+        
+        function exportToFile() {
+            exportPattern();
+            const patternText = document.getElementById('patternData').value;
+            const blob = new Blob([patternText], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `conway_pattern_${new Date().toISOString().slice(0,10)}.txt`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+        
+        function importFromFile() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.txt';
+            input.onchange = e => {
+                const file = e.target.files[0];
+                const reader = new FileReader();
+                reader.onload = e => {
+                    document.getElementById('patternData').value = e.target.result;
+                    importPattern();
+                };
+                reader.readAsText(file);
+            };
+            input.click();
+        }
+        
+        // === PATTERN PRESETS ===
+        
+        function addGlider(x = 5, y = 5) {
+            const pattern = [[0,1,0],[0,0,1],[1,1,1]];
+            placePattern(x, y, pattern);
+        }
+        
+        function addGliderGun(x = 5, y = 10) {
+            const pattern = [
+                [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0],
+                [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0],
+                [0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1],
+                [0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1],
+                [1,1,0,0,0,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                [1,1,0,0,0,0,0,0,0,0,1,0,0,0,1,0,1,1,0,0,0,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0],
+                [0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0],
+                [0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                [0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+            ];
+            placePattern(x, y, pattern);
+        }
+        
+        function addBlinker(x = 15, y = 15) {
+            const pattern = [[1,1,1]];
+            placePattern(x, y, pattern);
+        }
+        
+        function loadMyDiscovery() {
+            // Your diagonal pattern
+            const pattern = [
+                "**.............................",
+                "*.*............................",
+                ".*.*...........................",
+                "..*.*..........................",
+                "...*.*.........................",
+                "....*.*........................",
+                ".....*.*.......................",
+                "......*.*......................",
+                ".......*.*.....................",
+                "........*.*....................",
+                ".........*.*...................",
+                "..........*.*..................",
+                "...........*.*.................",
+                "............*.*................",
+                ".............*.*...............",
+                "..............*.*..............",
+                "...............*.*.............",
+                "................*.*............",
+                ".................*.*...........",
+                "..................*.*..........",
+                "...................*.*.........",
+                "....................*.*........",
+                ".....................*.*.......",
+                "......................*.*......",
+                ".......................*.*.....",
+                "........................*.*....",
+                ".........................*.*...",
+                "..........................*.*..",
+                "...........................*.*.",
+                "............................*.*",
+                ".............................**"
+            ];
+            resetGrid();
+            for (let i = 0; i < pattern.length && i < ROWS; i++) {
+                for (let j = 0; j < pattern[i].length && j < COLS; j++) {
+                    if (pattern[i][j] === '*') {
+                        grid[i][j] = 1;
+                    }
+                }
+            }
+            updateDisplay();
+        }
+        
+        function loadGliderStream() {
+            // Multiple gliders for fun
+            resetGrid();
+            for (let i = 0; i < 5; i++) {
+                addGlider(5 + i*3, 5 + i*8);
+            }
+        }
+        
+        function loadRandomGliders() {
+            resetGrid();
+            for (let i = 0; i < 8; i++) {
+                addGlider(
+                    Math.floor(Math.random() * (ROWS - 10)),
+                    Math.floor(Math.random() * (COLS - 10))
+                );
+            }
+        }
+        
+        function placePattern(startX, startY, pattern) {
+            for (let i = 0; i < pattern.length; i++) {
+                for (let j = 0; j < pattern[i].length; j++) {
+                    const x = (startX + i) % ROWS;
+                    const y = (startY + j) % COLS;
+                    grid[x][y] = pattern[i][j];
+                }
+            }
+            updateDisplay();
+        }
+
+        // Initialize on load
+        window.onload = function() {
+            initializeGrid();
+        };
+        
+        document.addEventListener('mousedown', (e) => {
+            if (e.target.classList.contains('cell')) {
+                e.preventDefault();
+            }
+        });
+    </script>
+</body>
+</html>

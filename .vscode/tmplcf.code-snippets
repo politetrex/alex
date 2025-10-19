@@ -1,9 +1,10 @@
 {
     "Code template for C++": {
         "scope": "cpp",
-        "prefix": "tmpbasic",
+        "prefix": "_tmpbasic",
         "body": [
             "#include <iostream>",
+            "#include <vector>",
             "",
             "using namespace std;",
             "",
@@ -17,9 +18,10 @@
 
     "Codeforces code template for C++": {
         "scope": "cpp",
-        "prefix": "tmpbasiccf",
+        "prefix": "_tmpbasiccf",
         "body": [
             "#include <iostream>",
+            "#include <vector>",
             "",
             "using namespace std;",
             "",
@@ -40,7 +42,7 @@
 
     "Codeforces code template for Python": {
         "scope": "python",
-        "prefix": "tmpbasiccf",
+        "prefix": "_tmpbasiccf",
         "body": [
             "def solve():",
             "\t${1:pass #solution}",

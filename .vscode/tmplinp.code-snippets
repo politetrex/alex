@@ -1,12 +1,12 @@
 {
-    "Input an array": {
+    /*"Input an array": {
         "scope": "cpp",
-        "prefix": "arrin",
+        "prefix": "_arrin",
         "body": [
             "vector<$1> $2($3);",
             "for(int i = 0; i < $3; i++) cin >> $2[i];",
             "$0"
         ]
         
-    }
+    }*/
 }

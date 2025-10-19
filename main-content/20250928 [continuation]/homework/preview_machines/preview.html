@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Ulam-Warburton Automaton Visualizer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .grid {
+            display: grid;
+            gap: 1px;
+            margin: 20px 0;
+            border: 2px solid #333;
+            padding: 5px;
+            background: #333;
+        }
+        .cell {
+            width: 20px;
+            height: 20px;
+            background: white;
+            border: 1px solid #ccc;
+        }
+        .cell.black {
+            background: black;
+        }
+        .cell.new-black {
+            background: #666;
+        }
+        .controls {
+            margin: 10px 0;
+        }
+        button {
+            margin: 0 5px;
+            padding: 8px 16px;
+            cursor: pointer;
+        }
+        .info {
+            margin: 10px 0;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Ulam-Warburton Automaton</h1>
+        
+        <div class="controls">
+            <button onclick="resetGrid()">Reset</button>
+            <button onclick="step()">Next Generation</button>
+            <button onclick="runMultiple(10)">Run 10 Steps</button>
+            <button onclick="runToCompletion()">Run to Completion</button>
+            <!--button onclick=""></button-->
+        </div>
+        
+        <div class="info">
+            Generation: <span id="generation">0</span> | 
+            Black Cells: <span id="blackCount">0</span>
+        </div>
+        
+        <div id="grid" class="grid"></div>
+        
+        <div class="info">
+            <p>Rule: White cells become black if they have exactly ONE black neighbor</p>
+            <p>Click cells to toggle them black/white</p>
+        </div>
+    </div>
+
+    <script>
+        const ROWS = 25;
+        const COLS = 25;
+        let grid = [];
+        let generation = 0;
+        
+        // Initialize grid
+        function initializeGrid() {
+            const gridElement = document.getElementById('grid');
+            gridElement.style.gridTemplateColumns = `repeat(${COLS}, 20px)`;
+            gridElement.innerHTML = '';
+            
+            grid = [];
+            for (let i = 0; i < ROWS; i++) {
+                grid[i] = [];
+                for (let j = 0; j < COLS; j++) {
+                    grid[i][j] = 0; // 0 = white, 1 = black
+                    
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.dataset.row = i;
+                    cell.dataset.col = j;
+                    cell.addEventListener('click', () => toggleCell(i, j));
+                    gridElement.appendChild(cell);
+                }
+            }
+            generation = 0;
+            updateDisplay();
+        }
+        
+        // Toggle cell state
+        function toggleCell(row, col) {
+            grid[row][col] = grid[row][col] ? 0 : 1;
+            updateDisplay();
+        }
+        
+        // Run one generation
+        function step() {
+            const changes = [];
+            
+            // Check each white cell
+            for (let i = 0; i < ROWS; i++) {
+                for (let j = 0; j < COLS; j++) {
+                    if (grid[i][j] === 0) { // White cell
+                        const blackNeighbors = countBlackNeighbors(i, j);
+                        if (blackNeighbors === 1) {
+                            changes.push([i, j]);
+                        }
+                    }
+                }
+            }
+            
+            // Apply changes
+            changes.forEach(([i, j]) => {
+                grid[i][j] = 1;
+            });
+            
+            generation++;
+            updateDisplay();
+            
+            // Return whether any changes occurred
+            return changes.length > 0;
+        }
+        
+        // Count black neighbors
+        function countBlackNeighbors(row, col) {
+            let count = 0;
+            const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+            
+            for (const [dr, dc] of directions) {
+                const r = row + dr;
+                const c = col + dc;
+                if (r >= 0 && r < ROWS && c >= 0 && c < COLS && grid[r][c] === 1) {
+                    count++;
+                }
+            }
+            return count;
+        }
+        
+        // Update visual display
+        function updateDisplay() {
+            let blackCount = 0;
+            
+            for (let i = 0; i < ROWS; i++) {
+                for (let j = 0; j < COLS; j++) {
+                    const cell = document.querySelector(`.cell[data-row="${i}"][data-col="${j}"]`);
+                    if (grid[i][j] === 1) {
+                        cell.className = 'cell black';
+                        blackCount++;
+                    } else {
+                        cell.className = 'cell';
+                    }
+                }
+            }
+            
+            document.getElementById('generation').textContent = generation;
+            document.getElementById('blackCount').textContent = blackCount;
+        }
+        
+        // Run multiple steps
+        function runMultiple(steps) {
+            for (let i = 0; i < steps; i++) {
+                if (!step()) break; // Stop if no changes
+            }
+        }
+        
+        // Run until no more changes
+        function runToCompletion() {
+            let changed;
+            do {
+                changed = step();
+            } while (changed);
+        }
+        
+        // Reset grid
+        function resetGrid() {
+            initializeGrid();
+        }
+        
+        // Add some initial pattern for demonstration
+        function addInitialPattern() {
+            // Add a plus pattern in the center
+            const centerRow = Math.floor(ROWS / 2);
+            const centerCol = Math.floor(COLS / 2);
+            
+            grid[centerRow][centerCol] = 1;
+            grid[centerRow-1][centerCol] = 1;
+            grid[centerRow+1][centerCol] = 1;
+            grid[centerRow][centerCol-1] = 1;
+            grid[centerRow][centerCol+1] = 1;
+            
+            updateDisplay();
+        }
+        
+        // Initialize on load
+        window.onload = function() {
+            initializeGrid();
+            addInitialPattern();
+        };
+    </script>
+</body>
+</html>

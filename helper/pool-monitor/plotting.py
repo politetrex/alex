@@ -13,11 +13,13 @@ df = pd.read_csv(csv_file)
 df['timestamp'] = pd.to_datetime(df['timestamp'])
 df['value'] = pd.to_numeric(df['value'], errors='coerce')
 
+print(df)
+
 # Sort just in case
 df = df.sort_values('timestamp').reset_index(drop=True)
 
 # Identify gaps (intervals larger than expected)
-max_interval = pd.Timedelta(seconds=10)  # adjust if your logger runs every 5s
+max_interval = pd.Timedelta(seconds=15)  # for longer requests, eg. mobile phone hotspots
 segments = []
 gap_segments = []
 
@@ -47,3 +49,5 @@ plt.xticks(rotation=45)
 plt.grid(True)
 plt.tight_layout()
 plt.show()
+
+#'''

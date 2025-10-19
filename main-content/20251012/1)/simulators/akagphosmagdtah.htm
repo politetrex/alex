@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Abraham's Great Escape Simulator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .grid-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .grid {
+            display: grid;
+            gap: 1px;
+            background-color: #ddd;
+            border: 2px solid #333;
+        }
+        
+        .cell {
+            width: 50px;
+            height: 50px;
+            background-color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            cursor: pointer;
+            user-select: none;
+            transition: background-color 0.2s;
+        }
+        
+        .cell:hover {
+            background-color: #f0f0f0;
+        }
+        
+        .cell.path {
+            background-color: #e6f7ff;
+        }
+        
+        .cell.current {
+            background-color: #ffeb3b;
+            font-weight: bold;
+        }
+        
+        .cell.escape {
+            background-color: #a5d6a7;
+        }
+        
+        .cell.trap {
+            background-color: #ffcdd2;
+        }
+        
+        .cell.start-escape {
+            background-color: #4CAF50;
+            color: white;
+        }
+        
+        .cell.start-trap {
+            background-color: #f44336;
+            color: white;
+        }
+        
+        button {
+            padding: 8px 16px;
+            margin: 5px;
+            border: none;
+            border-radius: 4px;
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        button:hover {
+            background-color: #45a049;
+        }
+        
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        
+        .simulation-controls {
+            display: none;
+            justify-content: center;
+            margin: 15px 0;
+            padding: 10px;
+            background-color: #f0f0f0;
+            border-radius: 4px;
+        }
+        
+        .stats {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+        }
+        
+        .mode-indicator {
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        
+        .edit-mode {
+            background-color: #ffeb3b;
+            color: #333;
+        }
+        
+        .simulate-mode {
+            background-color: #4CAF50;
+            color: white;
+        }
+        
+        .info-panel {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #e3f2fd;
+            border-radius: 4px;
+        }
+        
+        .status-message {
+            text-align: center;
+            margin: 10px 0;
+            padding: 8px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        
+        .status-escape {
+            background-color: #c8e6c9;
+            color: #2e7d32;
+        }
+        
+        .status-trap {
+            background-color: #ffcdd2;
+            color: #c62828;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Abraham's Great Escape Simulator</h1>
+        
+        <div class="controls">
+            <div>
+                <label for="gridSize">Grid Size (n): </label>
+                <input type="number" id="gridSize" min="2" max="10" value="5">
+                <button id="createGrid">Create Grid</button>
+            </div>
+            <div>
+                <button id="toggleMode">Switch to Simulation Mode</button>
+                <span id="modeIndicator" class="mode-indicator edit-mode">Edit Mode</span>
+            </div>
+        </div>
+        
+        <div class="grid-container">
+            <div id="grid" class="grid"></div>
+        </div>
+        
+        <div id="statusMessage" class="status-message" style="display: none;"></div>
+        
+        <div id="simulationControls" class="simulation-controls">
+            <button id="startSimulation">Run</button>
+            <button id="nextStep" disabled>Next Step</button>
+            <button id="stopSimulation" disabled>Stop</button>
+            <button id="exitSimulation">Exit</button>
+        </div>
+        
+        <div class="stats">
+            <p>Escape Count: <span id="escapeCount">0</span></p>
+            <p>Current Path Length: <span id="pathLength">0</span></p>
+        </div>
+        
+        <div class="info-panel">
+            <h3>How to use:</h3>
+            <p><strong>Edit Mode:</strong> Click on cells to cycle through arrow directions (↑ → ↓ ←)</p>
+            <p><strong>Simulation Mode:</strong> Click on a starting cell to begin simulation</p>
+            <p>Green starting cells lead to escape, red starting cells lead to loops/traps</p>
+        </div>
+    </div>
+
+    <script>
+        // Game state
+        let grid = [];
+        let gridSize = 5;
+        let isEditMode = true;
+        let simulationState = {
+            active: false,
+            currentPath: [],
+            currentPosition: null,
+            startPosition: null,
+            visited: new Set(),
+            escapePaths: new Set(),
+            trapPaths: new Set(),
+            intervalId: null
+        };
+        
+        // Arrow directions in cycle order
+        const directions = ['↑', '→', '↓', '←'];
+        const directionVectors = {
+            '↑': {dx: 0, dy: -1},
+            '→': {dx: 1, dy: 0},
+            '↓': {dx: 0, dy: 1},
+            '←': {dx: -1, dy: 0}
+        };
+        
+        // DOM elements
+        const gridElement = document.getElementById('grid');
+        const gridSizeInput = document.getElementById('gridSize');
+        const createGridButton = document.getElementById('createGrid');
+        const toggleModeButton = document.getElementById('toggleMode');
+        const modeIndicator = document.getElementById('modeIndicator');
+        const startSimulationButton = document.getElementById('startSimulation');
+        const nextStepButton = document.getElementById('nextStep');
+        const stopSimulationButton = document.getElementById('stopSimulation');
+        const exitSimulationButton = document.getElementById('exitSimulation');
+        const escapeCountElement = document.getElementById('escapeCount');
+        const pathLengthElement = document.getElementById('pathLength');
+        const simulationControls = document.getElementById('simulationControls');
+        const statusMessage = document.getElementById('statusMessage');
+        
+        // Initialize the grid
+        function initializeGrid() {
+            gridSize = parseInt(gridSizeInput.value);
+            grid = [];
+            
+            // Create empty grid
+            for (let i = 0; i < gridSize; i++) {
+                grid[i] = [];
+                for (let j = 0; j < gridSize; j++) {
+                    // Start with random arrows
+                    grid[i][j] = directions[Math.floor(Math.random() * directions.length)];
+                }
+            }
+            
+            renderGrid();
+            updateEscapeCount();
+        }
+        
+        // Render the grid
+        function renderGrid() {
+            gridElement.innerHTML = '';
+            gridElement.style.gridTemplateColumns = `repeat(${gridSize}, 1fr)`;
+            
+            for (let i = 0; i < gridSize; i++) {
+                for (let j = 0; j < gridSize; j++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.textContent = grid[i][j];
+                    cell.dataset.row = i;
+                    cell.dataset.col = j;
+                    
+                    const cellKey = `${i},${j}`;
+                    
+                    // Add appropriate classes based on simulation state
+                    if (simulationState.active) {
+                        if (simulationState.currentPath.includes(cellKey)) {
+                            cell.classList.add('path');
+                        }
+                        if (cellKey === simulationState.currentPosition) {
+                            cell.classList.add('current');
+                        }
+                    }
+                    
+                    // Mark start positions that lead to escape or trap
+                    if (simulationState.escapePaths.has(cellKey)) {
+                        cell.classList.add('start-escape');
+                    } else if (simulationState.trapPaths.has(cellKey)) {
+                        cell.classList.add('start-trap');
+                    }
+                    
+                    cell.addEventListener('click', handleCellClick);
+                    gridElement.appendChild(cell);
+                }
+            }
+        }
+        
+        // Handle cell clicks
+        function handleCellClick(event) {
+            const row = parseInt(event.target.dataset.row);
+            const col = parseInt(event.target.dataset.col);
+            
+            if (isEditMode) {
+                // In edit mode, cycle through arrow directions
+                const currentIndex = directions.indexOf(grid[row][col]);
+                grid[row][col] = directions[(currentIndex + 1) % directions.length];
+                renderGrid();
+                updateEscapeCount();
+            } else {
+                // In simulation mode, start simulation from this cell
+                if (!simulationState.active) {
+                    startSimulation(row, col);
+                }
+                // If simulation is active, ignore clicks on grid cells
+            }
+        }
+        
+        // Toggle between edit and simulation modes
+        function toggleMode() {
+            isEditMode = !isEditMode;
+            
+            if (isEditMode) {
+                modeIndicator.textContent = 'Edit Mode';
+                modeIndicator.className = 'mode-indicator edit-mode';
+                toggleModeButton.textContent = 'Switch to Simulation Mode';
+                simulationControls.style.display = 'none';
+                statusMessage.style.display = 'none';
+                resetSimulation();
+            } else {
+                modeIndicator.textContent = 'Simulation Mode';
+                modeIndicator.className = 'mode-indicator simulate-mode';
+                toggleModeButton.textContent = 'Switch to Edit Mode';
+                simulationControls.style.display = 'flex';
+                statusMessage.style.display = 'none';
+            }
+            
+            renderGrid();
+        }
+        
+        // Start simulation from a specific cell
+        function startSimulation(row, col) {
+            simulationState.active = true;
+            simulationState.currentPath = [];
+            simulationState.visited = new Set();
+            simulationState.currentPosition = `${row},${col}`;
+            simulationState.startPosition = `${row},${col}`;
+            
+            startSimulationButton.disabled = false;
+            nextStepButton.disabled = false;
+            stopSimulationButton.disabled = false;
+            
+            // Clear any previous status message
+            statusMessage.style.display = 'none';
+            
+            // If we already know this path leads to escape or trap, show immediately
+            const cellKey = `${row},${col}`;
+            if (simulationState.escapePaths.has(cellKey)) {
+                showResult(true);
+                return;
+            } else if (simulationState.trapPaths.has(cellKey)) {
+                showResult(false);
+                return;
+            }
+            
+            // Otherwise, start step-by-step simulation
+            simulationState.currentPath.push(cellKey);
+            simulationState.visited.add(cellKey);
+            
+            renderGrid();
+            updatePathLength();
+        }
+        
+        // Perform next step in simulation
+        function nextStep() {
+            if (!simulationState.active) return;
+            
+            const [row, col] = simulationState.currentPosition.split(',').map(Number);
+            const direction = grid[row][col];
+            const vector = directionVectors[direction];
+            
+            // Calculate next position
+            const nextRow = row + vector.dy;
+            const nextCol = col + vector.dx;
+            const nextPosition = `${nextRow},${nextCol}`;
+            
+            // Check if we've escaped
+            if (nextRow < 0 || nextRow >= gridSize || nextCol < 0 || nextCol >= gridSize) {
+                // Escaped!
+                simulationState.escapePaths.add(simulationState.startPosition);
+                showResult(true);
+                return;
+            }
+            
+            // Check if we're in a loop
+            if (simulationState.visited.has(nextPosition)) {
+                // We're in a loop/trap
+                simulationState.trapPaths.add(simulationState.startPosition);
+                showResult(false);
+                return;
+            }
+            
+            // Move to next position
+            simulationState.currentPosition = nextPosition;
+            simulationState.currentPath.push(nextPosition);
+            simulationState.visited.add(nextPosition);
+            
+            renderGrid();
+            updatePathLength();
+        }
+        
+        // Run simulation automatically
+        function runSimulation() {
+            if (simulationState.intervalId) {
+                clearInterval(simulationState.intervalId);
+            }
+            
+            simulationState.intervalId = setInterval(() => {
+                nextStep();
+                
+                // Stop if simulation is no longer active (path completed)
+                if (!simulationState.active) {
+                    clearInterval(simulationState.intervalId);
+                }
+            }, 500); // Run every 500ms
+        }
+        
+        // Show the result of a simulation
+        function showResult(escaped) {
+            simulationState.active = false;
+            
+            // Update the start cell to show result
+            if (escaped) {
+                simulationState.escapePaths.add(simulationState.startPosition);
+                statusMessage.textContent = "Abraham escaped!";
+                statusMessage.className = "status-message status-escape";
+            } else {
+                simulationState.trapPaths.add(simulationState.startPosition);
+                statusMessage.textContent = "Abraham is trapped in a loop!";
+                statusMessage.className = "status-message status-trap";
+            }
+            
+            statusMessage.style.display = 'block';
+            
+            // Update controls
+            startSimulationButton.disabled = true;
+            nextStepButton.disabled = true;
+            stopSimulationButton.disabled = true;
+            
+            renderGrid();
+            updateEscapeCount();
+            updatePathLength();
+            
+            // Clear any running interval
+            if (simulationState.intervalId) {
+                clearInterval(simulationState.intervalId);
+                simulationState.intervalId = null;
+            }
+        }
+        
+        // Stop the current simulation
+        function stopSimulation() {
+            simulationState.active = false;
+            
+            // Clear any running interval
+            if (simulationState.intervalId) {
+                clearInterval(simulationState.intervalId);
+                simulationState.intervalId = null;
+            }
+            
+            // Reset controls
+            startSimulationButton.disabled = false;
+            nextStepButton.disabled = true;
+            stopSimulationButton.disabled = true;
+            
+            updatePathLength();
+        }
+        
+        // Exit simulation mode
+        function exitSimulation() {
+            resetSimulation();
+            toggleMode();
+        }
+        
+        // Reset simulation state
+        function resetSimulation() {
+            simulationState.active = false;
+            simulationState.currentPath = [];
+            simulationState.currentPosition = null;
+            simulationState.startPosition = null;
+            simulationState.visited = new Set();
+            // Keep escapePaths and trapPaths to remember results
+            
+            startSimulationButton.disabled = false;
+            nextStepButton.disabled = true;
+            stopSimulationButton.disabled = true;
+            
+            // Clear any running interval
+            if (simulationState.intervalId) {
+                clearInterval(simulationState.intervalId);
+                simulationState.intervalId = null;
+            }
+            
+            statusMessage.style.display = 'none';
+            
+            renderGrid();
+            updatePathLength();
+        }
+        
+        // Update the escape count display
+        function updateEscapeCount() {
+            escapeCountElement.textContent = simulationState.escapePaths.size;
+        }
+        
+        // Update the path length display
+        function updatePathLength() {
+            pathLengthElement.textContent = simulationState.currentPath.length;
+        }
+        
+        // Event listeners
+        createGridButton.addEventListener('click', initializeGrid);
+        toggleModeButton.addEventListener('click', toggleMode);
+        startSimulationButton.addEventListener('click', runSimulation);
+        nextStepButton.addEventListener('click', nextStep);
+        stopSimulationButton.addEventListener('click', stopSimulation);
+        exitSimulationButton.addEventListener('click', exitSimulation);
+        
+        // Initialize the app
+        initializeGrid();
+    </script>
+</body>
+</html>
