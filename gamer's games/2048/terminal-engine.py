@@ -15,9 +15,9 @@ previous = ' '
 _errors1 = [" Entered X                     ", " Command X is invalid          ", 
             " Move didn't change board      ", " Game over!                    ", 
             " You won!                      ", " Please enter Y or N!          ", 
-            " Quitting now?                 "]
-_inputs1 = [" Enter a command: _             \b\b\b\b\b\b\b\b\b\b\b\b\b", " Press to continue(Y/N): _     \b\b\b\b\b\b",
-            " Press to quit(Q): _            \b\b\b\b\b\b\b\b\b\b\b\b"]
+            " Quitting now?                 ", " You possibly meant X.         "]
+_inputs1 = [" Enter a command: _            \b\b\b\b\b\b\b\b\b\b\b\b\b", " Press to continue(Y/N): _     \b\b\b\b\b\b",
+             " Press to replay(Y/N): _       \b\b\b\b\b\b\b\b", " Press to quit(Q): _            \b\b\b\b\b\b\b\b\b\b\b\b"]
 # ------------------------------- 
 # Replay/Continue/Exit(R/C/E):
 #
@@ -46,18 +46,29 @@ def clear_screen() -> None:
 def boards_equal(b1, b2) -> bool:
     return all(b1[i] == b2[i] for i in range(4))
 
-def error_message(code) -> str:
-    global previous
-    if len(previous) != 1:
+def error_message() -> str:
+    global previous, error_code
+    if len(previous)!=1:
         previous = '?'
     else:
         if previous not in 'WASDQI':
             previous = '?'
-    return _errors1[code].replace('X', previous)
+    return _errors1[error_code].replace('X', previous)
 
-def on_off(bl) -> bool:
+def on_off(bl) -> str:
     if bl: return 'on '
     else: return 'off'
+
+def safe_input(x=None):
+    try:
+        if x:
+            return input(x)
+        else:
+            return input()
+    except EOFError:
+        return 'EOF'
+    except:
+        quit_display()
 
 # game mechanics functions
 def pop_random() -> bool:
@@ -120,7 +131,7 @@ def quit_confirm(i=0) -> None:
     input_code = i+1
     display()
     while True:
-        confirm = input().strip().upper()
+        confirm = safe_input().strip().upper()
         if confirm == 'Y':
             error_code = 0
             input_code = 0
@@ -142,7 +153,7 @@ def welcome_quit() -> None:
     print( )
     print(f"      Try to reach {num_to_unit(2048)}!      ")
     print()
-    to_quit = input(" y to quit (pls not):            "+"\b"*12).strip().upper()
+    to_quit = safe_input(" y to quit (pls not):            "+"\b"*12).strip().upper()
     if to_quit == 'Y':
         quit_display()
 
@@ -171,18 +182,19 @@ def check_game_over() -> bool:
 def operation_possible(before) -> int:
     "Check if an operation is possible."
     global previous, cells, error_code, input_code
+    if not boards_equal(before, cells):
+        pop_random()
+        error_code = 0
+    else:
+        error_code = 2
     # Always check game over, even if no tiles moved
     if check_game_over():
         error_code = 3
         input_code = 1
         display()
         return 1
-    if not boards_equal(before, cells):
-        pop_random()
-        error_code = 0
     else:
-        error_code = 2
-    return 0
+        return 0
 
 def check_blanks() -> list:
     '''Output the places where they are blank.'''
@@ -273,7 +285,7 @@ def display() -> None:
     if (error_code == 4 or error_code == 3):
         input_code = 1
     print()
-    print(_errors1[error_code])
+    print(error_message())
     print(_inputs1[input_code], end='', flush=True)
 
 def display_rules() -> None:
@@ -288,7 +300,7 @@ def display_rules() -> None:
  I = instructions                
 
  Press Enter to continue         \b\b\b\b\b\b\b\b\b''', end="")
-    input()
+    safe_input()
 
 def home() -> None:
     '''Return to the home screen.'''
@@ -306,7 +318,7 @@ def home() -> None:
         print( )
         print(f"      Try to reach {num_to_unit(2048)}!      ")
         print()
-        command = input(" Enter E to start: _             \b\b\b\b\b\b\b\b\b\b\b\b\b\b").strip().upper()
+        command = safe_input(" Enter E to start: _             \b\b\b\b\b\b\b\b\b\b\b\b\b\b").strip().upper()
         if command == 'I':
             display_rules()
         elif command == 'S':
@@ -336,7 +348,7 @@ def set_settings() -> None:
         print(" S to scroll, T to toggle,       \n" \
               " C to confirm                    ")
         print()
-        cmd = input(" Enter a command...              "+"\b"*8).strip().upper()
+        cmd = safe_input(" Enter a command...              "+"\b"*8).strip().upper()
         if cmd=="S":
             selected = (selected + 1) % len(settings)
         elif cmd=="T":
@@ -356,7 +368,17 @@ def main() -> int:
     while True:
         reset_min_max()
         display()
-        command = input().strip().upper()
+        command = safe_input().strip().upper()
+        
+        if command:
+            n = command[0]
+            status=True
+            for i in command:
+                if i != n:
+                    command = '?'
+                    status=False
+            if status: command = n
+
         if command == 'W':
             previous = 'W'
             before = copy.deepcopy(cells)
@@ -397,9 +419,6 @@ def main() -> int:
             if operation_possible(before):
                 return 1
         elif command == 'E':
-            print("Exiting the game.")
-            return 0
-        elif command == 'Q':
             quit_confirm(1)
             error_code = 0
             continue
@@ -431,7 +450,7 @@ if __name__ == "__main__":
             display()
             quit_choice = True
             while True:
-                choice = input().strip().upper()
+                choice = safe_input().strip().upper()
                 if choice == 'N':
                     print("Thanks for playing!")
                     print()

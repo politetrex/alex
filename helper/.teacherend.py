@@ -23,7 +23,7 @@ def link_to_filename(link):
 print("C++ file template creator on the command line")
 
 def askdir():
-    base_dir=input("Enter a directory path: ")
+    base_dir=("Enter a directory path: ")
     if os.path.isdir(base_dir):
         print(f"You entered: {base_dir}")
     else:
@@ -33,6 +33,6 @@ def askdir():
 
 while True:
     try:
-        print(link_to_filename(input("Enter a link: ")))
+        print(link_to_filename(("Enter a link: ")))
     except ValueError as e:
         print(e)
