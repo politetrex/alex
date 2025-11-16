@@ -4,13 +4,84 @@
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Infinite Logic Board</title>
+        <!--Toolbar styling-->
         <style>
+            .toolbar {
+                width: 66px;
+                position: fixed;
+                top: 5px;
+                right: 5px;
+                border: 3px solid black;
+                background-color: lightgray;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+            }
+            .toolbar hr {
+                width: 80%;
+                border: 1px solid black;
+                margin: 5px 0;
+            }
+            .toolbar button {
+                width: 60px;
+                height: 60px;
+                border: 3px solid blue;
+                background-color: white;
+                border-radius: 0;
+                cursor: pointer;
+                margin: 3px;
+            }
+            .toolbar button:active {
+                border: 3px solid green; /* Change outline color when clicked */
+            }
+
+            /* Button-specific */
+            #anchor-btn {
+                background: url('./assets/Anchor.svg') center/contain no-repeat;
+            }
+            #and-btn {
+                background: url('./assets/And.svg') center/contain no-repeat;
+            }
+            #or-btn {
+                background: url('./assets/Or.svg') center/contain no-repeat;
+            }
+            #not-btn {
+                background: url('./assets/Not.svg') center/contain no-repeat;
+            }
+            #straight-btn {
+                background: url('./assets/Straight.svg') center/contain no-repeat;
+            }
+            #turn-btn {
+                background: url('./assets/Turn.svg') center/contain no-repeat;
+            }
+            #cross-btn {
+                background: url('./assets/Cross.svg') center/contain no-repeat;
+            }
+            #split-btn {
+                background: url('./assets/Split.svg') center/contain no-repeat;
+            }
         </style>
     </head>
     <body>
         <div class="game"></div>
         <div class="toolbar">
-            <button onclick="anchor.scrollIntoView()"><img src="./assets/Anchor.svg"></button>
+            <button id="anchor-btn" onclick="anchor.scrollIntoView()"></button>
+            <hr>
+            <button id="and-btn" onclick=""></button>
+            <button id="or-btn" onclick=""></button>
+            <button id="not-btn" onclick=""></button>
+            <hr>
+            <button id="straight-btn" onclick=""></button>
+            <button id="turn-btn" onclick=""></button>
+            <button id="cross-btn" onclick=""></button>
+            <button id="split-btn" onclick=""></button>
+            <hr>
+            <button id="light-btn" onclick=""></button>
+            <button id="button-btn" onclick=""></button>
+            <!--
+            <hr>
+            <button id="delete-btn" onclick=""></button>
+            -->
         </div>
     </body>
 </html>
