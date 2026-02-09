@@ -60,28 +60,147 @@
             #split-btn {
                 background: url('./assets/Split.svg') center/contain no-repeat;
             }
+            #light-btn {
+                background: url('./assets/Light/On.svg') center/contain no-repeat;
+            }
+            #button-btn {
+                background: url('./assets/Button/On.svg') center/contain no-repeat;
+            }
         </style>
+
     </head>
     <body>
-        <div class="game"></div>
+        <div class="game">
+            <canvas id="gridCanvas" style="display: block; cursor: grab;"></canvas>
+        </div>
         <div class="toolbar">
-            <button id="anchor-btn" onclick="anchor.scrollIntoView()"></button>
+            <!--
+            <button id="anchor-btn" onclick="centerAnchor()"></button>
+            <hr>-->
+            <button id="and-btn" onclick="addAnd()"></button>
+            <button id="or-btn" onclick="addOr()"></button>
+            <button id="not-btn" onclick="addNot()"></button>
             <hr>
-            <button id="and-btn" onclick=""></button>
-            <button id="or-btn" onclick=""></button>
-            <button id="not-btn" onclick=""></button>
+            <button id="straight-btn" onclick="addStraight()"></button>
+            <button id="turn-btn" onclick="addTurn()"></button>
+            <button id="cross-btn" onclick="addCross()"></button>
+            <button id="split-btn" onclick="addSplit()"></button>
             <hr>
-            <button id="straight-btn" onclick=""></button>
-            <button id="turn-btn" onclick=""></button>
-            <button id="cross-btn" onclick=""></button>
-            <button id="split-btn" onclick=""></button>
-            <hr>
-            <button id="light-btn" onclick=""></button>
-            <button id="button-btn" onclick=""></button>
+            <button id="light-btn" onclick="addLight()"></button>
+            <button id="button-btn" onclick="addButton()"></button>
             <!--
             <hr>
             <button id="delete-btn" onclick=""></button>
             -->
         </div>
+        <script>
+            const canvas = document.getElementById('gridCanvas');
+            const ctx = canvas.getContext('2d');
+
+            // Grid settings
+            const gridState = {
+                cols: 20,
+                rows: 15,
+                cellSize: 40,
+                offsetX: 0,
+                offsetY: 0
+            };
+
+            // Interactive elements
+            const elements = [];
+
+            // Initialize canvas
+            function initCanvas() {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+                centerGrid();
+                drawGrid();
+            }
+
+            // Center grid on screen
+            function centerGrid() {
+                const totalWidth = gridState.cols * gridState.cellSize;
+                const totalHeight = gridState.rows * gridState.cellSize;
+                gridState.offsetX = (canvas.width - totalWidth) / 2;
+                gridState.offsetY = (canvas.height - totalHeight) / 2;
+            }
+
+            // Draw the grid
+            function drawGrid() {
+                // Clear canvas
+                ctx.fillStyle = '#1a1a2e';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                // Draw grid cells
+                ctx.strokeStyle = 'rgba(100, 150, 255, 0.3)';
+                ctx.lineWidth = 1;
+
+                for (let x = 0; x < gridState.cols; x++) {
+                    for (let y = 0; y < gridState.rows; y++) {
+                        const screenX = gridState.offsetX + x * gridState.cellSize;
+                        const screenY = gridState.offsetY + y * gridState.cellSize;
+
+                        ctx.strokeRect(screenX, screenY, gridState.cellSize, gridState.cellSize);
+                    }
+                }
+
+                // Draw elements
+                elements.forEach(element => {
+                    drawElement(element);
+                });
+            }
+
+            // Draw element on grid
+            function drawElement(element) {
+                const screenX = gridState.offsetX + element.gridX * gridState.cellSize;
+                const screenY = gridState.offsetY + element.gridY * gridState.cellSize;
+
+                ctx.fillStyle = element.color || 'rgba(100, 150, 255, 0.8)';
+                ctx.fillRect(screenX + 2, screenY + 2, gridState.cellSize - 4, gridState.cellSize - 4);
+
+                ctx.strokeStyle = 'white';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(screenX + 2, screenY + 2, gridState.cellSize - 4, gridState.cellSize - 4);
+
+                // Draw element label
+                ctx.fillStyle = 'white';
+                ctx.font = '12px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(
+                    element.type.toUpperCase(),
+                    screenX + gridState.cellSize / 2,
+                    screenY + gridState.cellSize / 2
+                );
+            }
+
+            // Add element functions
+            function addAnd() { addElement('and', '#4CAF50'); }
+            function addOr() { addElement('or', '#2196F3'); }
+            function addNot() { addElement('not', '#FF9800'); }
+            function addStraight() { addElement('straight', '#9C27B0'); }
+            function addTurn() { addElement('turn', '#795548'); }
+            function addCross() { addElement('cross', '#607D8B'); }
+            function addSplit() { addElement('split', '#FF5722'); }
+            function addLight() { addElement('light', '#FFEB3B'); }
+            function addButton() { addElement('button', '#E91E63'); }
+
+            // Handle canvas clicks for element placement
+            canvas.addEventListener('click', (e) => {
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+
+                // Find grid position
+                const gridX = Math.floor((x - gridState.offsetX) / gridState.cellSize);
+                const gridY = Math.floor((y - gridState.offsetY) / gridState.cellSize);
+            });
+
+            // Handle window resize
+            window.addEventListener('resize', initCanvas);
+
+            // Initialize
+            window.addEventListener('load', initCanvas);
+        </script>
     </body>
 </html>

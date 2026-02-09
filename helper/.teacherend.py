@@ -10,6 +10,8 @@ def link_to_filename(link):
                 return "cf_contest"+splitted_link[4]+"_"+splitted_link[6]
             elif (splitted_link[3]=="problemset") & (splitted_link[4]=="problem") & (len(splitted_link)==7):
                 return "cf_pbset_"+splitted_link[5]+"_"+splitted_link[6]
+            if (splitted_link[3]=="gym") & (splitted_link[5]=="problem") & (len(splitted_link)==7):
+                return "cf_gym_"+splitted_link[4]+"_"+splitted_link[6]
             else:
                 raise ValueError("Invalid Codeforces link")
         elif splitted_link[2]=="atcoder.jp":
@@ -33,6 +35,6 @@ def askdir():
 
 while True:
     try:
-        print(link_to_filename(("Enter a link: ")))
+        print(link_to_filename(input("Enter a link: ")))
     except ValueError as e:
         print(e)
