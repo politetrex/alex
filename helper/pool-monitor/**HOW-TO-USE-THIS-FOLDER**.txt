@@ -1,7 +1,7 @@
 ## How to use this folder
 watch_pool.py should be immidietly opened.
 plotting.py shows the data(pool_log.csv) in a dot plot.
-When you delete pool_log.csv, the data is forever gone 
+When you delete pool_log_*********.csv, the data is forever gone for that time
 (except when you want a clean restart).
 
 ### This records the number of people using CPH, usually 5~6 seconds a time.
