@@ -3,6 +3,33 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import time
 
+def compress_data(df, level):
+    """
+    根据压缩等级对数据进行时间聚合
+    """
+    if level == 0:
+        return df  # 原始数据
+    # 定义每个等级对应的秒数
+    level_seconds = {
+        1: 10,
+        2: 15,
+        3: 30,
+        4: 60,
+        5: 300,   # 5 minutes
+        6: 600,   # 10 minutes
+        7: 900,   # 15 minutes
+        8: 1800   # 30 minutes
+    }
+    
+    if level not in level_seconds:
+        print(f"⚠️ 无效等级 {level}，使用原始数据")
+        return df
+    
+    seconds = level_seconds[level]
+    # 将时间戳设为索引，并按指定秒数重采样，取平均值
+    df_resampled = df.set_index('timestamp').resample(f'{seconds}S').mean().reset_index()
+    return df_resampled
+compress_level = int(input("Enter Compress Level (0-8): "))
 csv_file = "pool_log_"+input(">>>")+".csv"
 
 while True:
@@ -13,6 +40,7 @@ while True:
         df['timestamp'] = pd.to_datetime(df['timestamp'])
         df['value'] = pd.to_numeric(df['value'], errors='coerce')
         df = df.sort_values('timestamp').reset_index(drop=True)
+        df = compress_data(df, compress_level)
     except Exception as e:
         print(f"⚠️ 读取CSV失败: {e}，等待重试...")
         time.sleep(60)
@@ -53,6 +81,7 @@ while True:
         plt.plot(seg['timestamp'], seg['value'], marker='o', markersize=3, linewidth=1, color='blue')
     for gap in gap_segments:
         plt.plot(gap['timestamp'], gap['value'], marker='o', markersize=3, linewidth=1, color='red')
+        # plt.plot(gap['timestamp'], gap['value'], marker='o', markersize=3, linewidth=1, color='blue')
     for error in error_segments:
         if len(error) > 0:
             start_idx = error.index[0]
@@ -85,7 +114,7 @@ while True:
     latest_val = df['value'].iloc[-1] if not pd.isna(df['value'].iloc[-1]) else "ERR"
     latest_time = df['timestamp'].iloc[-1]
     plt.text(0.02, 0.98, 
-             f"📊 Points: {total_points} | ERR: {error_count} | Gaps: {gap_count} | Latest: {latest_val} @ {latest_time.strftime('%H:%M:%S')}",
+             f"Points: {total_points} | ERR: {error_count} | Gaps: {gap_count} | Latest: {latest_val} @ {latest_time.strftime('%H:%M:%S')}",
              transform=plt.gca().transAxes, 
              verticalalignment='top',
              fontsize=10, 
@@ -96,7 +125,7 @@ while True:
     plt.ylabel("Active Users")
     plt.xticks(rotation=45)
     plt.grid(True)
-    plt.legend()
+    # plt.legend()
     plt.tight_layout()
 
     # --- 刷新并等待 ---
